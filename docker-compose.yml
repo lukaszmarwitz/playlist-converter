@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+
+  wildfly:
+    image: jboss/wildfly
+    container_name: playlist_converter
+    command: bash -c "/opt/jboss/wildfly/bin/add-user.sh admin admin --silent
+      && /opt/jboss/wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0"
+    environment:
+      - TZ=Europe/Warsaw
+    volumes:
+      - ./target/playlist-converter-1.0-SNAPSHOT.war:/opt/jboss/wildfly/standalone/deployments/playlist-converter-1.0-SNAPSHOT.war
+    ports:
+      - 5080:8080
