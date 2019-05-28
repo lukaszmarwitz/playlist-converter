@@ -10,8 +10,8 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,99 +20,73 @@ public class Engine {
 
     private static final Logger LOG = LoggerFactory.getLogger(Engine.class);
     private static final String URL_APPLE = "https://itunes.apple.com/pl/playlist/tech/pl.2af7d699174148d98c6ae5f66ab70591";
-    private static final String CODE_BEFORE_ARTIST = "dir=\"ltr\" aria-label=\"";
-    private static final String CODE_AFTER_ARTIST = "\" id";
-    private static final String CODE_BEFORE_TITLE = "class=\"spread\" aria-label=\"";
-    private static final String CODE_AFTER_TITLE = "\" data-test-song-link-wrapper";
     private static final String URL_YOUTUBE = "https://www.youtube.com/results?search_query=";
-    private static final String CODE_BEFORE_YT_URL = "ytimg.com/vi/";
-    private static final String CODE_AFTER_YT_URL = "/hqdefault";
+    private static final Pattern PATTERN_APPLE_MUSIC_ARTIST = Pattern.compile("dir=\"ltr\" aria-label=\"(.*)\" id");
+    private static final Pattern PATTERN_APPLE_MUSIC_TITLE = Pattern.compile("class=\"spread\" aria-label=\"(.*)\">");
+    private static final Pattern PATTERN_YOUTUBE = Pattern.compile("ytimg.com/vi/(\\S+)/hqdefault");
+    private static final int THRESHOLD = 5;
 
-    public ArrayList<String> urlList(URL url) {
-        ArrayList<URL> list = youtubeSearchUrlBuilder(url);
-        ArrayList<String> result = new ArrayList<>();
+    public List<String> getVideoIdList(String urlAddress) {
 
-        for (int i = 0; i < list.size(); i++) {
-            result.add(youtubeUrlResults(list.get(i)));
-        }
+        Engine engine = new Engine();
 
-        return result;
+        String source = engine.websiteSourceReader(urlAddress);
+        List<String> artistsList = engine.patternMatcher(source, PATTERN_APPLE_MUSIC_ARTIST);
+        List<String> titlesList = engine.patternMatcher(source, PATTERN_APPLE_MUSIC_TITLE);
+        String[] youtubeQueryArray = engine.youtubeQueryUrlBuilder(artistsList, titlesList);
+
+        ForkJoinPool forkJoinPool = new ForkJoinPool();
+
+        return forkJoinPool.invoke(new ForkJoinSourceReader(THRESHOLD, PATTERN_YOUTUBE, youtubeQueryArray));
     }
 
-    private String websiteSourceReader(URL url) {
+    String websiteSourceReader(String urlAddress) {
 
-        LOG.info("Website source reader URL: {}", url.toString());
+        LOG.info("Reading source from URL: {}", urlAddress);
+
+        URL url = null;
+        try {
+            url = new URL(urlAddress);
+        } catch (MalformedURLException e) {
+            LOG.error(e.toString());
+        }
 
         StringBuilder stringBuilder = new StringBuilder();
 
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(url.openStream()));
-
+        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(url.openStream()))) {
             String inputLine;
-
             while ((inputLine = bufferedReader.readLine()) != null) {
                 stringBuilder.append(inputLine.trim());
                 stringBuilder.append(System.lineSeparator());
             }
-
-            bufferedReader.close();
-
         } catch (IOException e) {
-            System.out.println(e);
+            LOG.error(e.toString());
         }
 
         return stringBuilder.toString();
     }
 
-    private Map<Integer, String> patternMatcher(String source, String prefix, String postfix) {
+    private List<String> patternMatcher(String source, Pattern pattern) {
 
-        Pattern p = Pattern.compile(prefix + "(.*)" + postfix);
-        Matcher m = p.matcher(source);
+        Matcher matcher = pattern.matcher(source);
 
-        int counter = 1;
+        List<String> list = new ArrayList<>();
 
-        Map<Integer, String> list = new TreeMap<>();
-
-        while (m.find()) {
-            String result = m.group(1).replaceAll(" ", "+").replaceAll("&amp;", "");
-            list.put(counter++, result);
+        while (matcher.find()) {
+            list.add(matcher.group(1).replaceAll(" ", "+").replaceAll("&amp;", ""));
         }
 
         return list;
     }
 
-    private ArrayList<URL> youtubeSearchUrlBuilder(URL url) {
+    private String[] youtubeQueryUrlBuilder(List<String> firstList, List<String> secondList) {
 
-        LOG.info("String builder URL: {}", url.toString());
+        String[] array = new String[firstList.size()];
 
-        Map<Integer, String> artistsList = patternMatcher(websiteSourceReader(url), CODE_BEFORE_ARTIST, CODE_AFTER_ARTIST);
-        Map<Integer, String> titlesList = patternMatcher(websiteSourceReader(url), CODE_BEFORE_TITLE, CODE_AFTER_TITLE);
-        ArrayList<URL> queryList = new ArrayList<>();
-
-        for (int i = 1; i <= 10; i++) {
-            URL output = null;
-            try {
-                output = new URL(URL_YOUTUBE + artistsList.get(i) + "+" + titlesList.get(i));
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-            queryList.add(output);
+        for (int i = 0; i < array.length; i++) {
+            array[i] = (URL_YOUTUBE + firstList.get(i) + "+" + secondList.get(i));
         }
 
-        return queryList;
-    }
-
-    private String youtubeUrlResults(URL url) {
-
-        Pattern p = Pattern.compile(CODE_BEFORE_YT_URL + "(\\S+)" + CODE_AFTER_YT_URL);
-        Matcher m = p.matcher(websiteSourceReader(url));
-
-        String result = "";
-
-        if (m.find()) {
-            result = (m.group(1));
-        }
-
-        return result;
+        return array;
     }
 }

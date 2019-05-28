@@ -15,9 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.transaction.Transactional;
 import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Transactional
@@ -42,17 +41,17 @@ public class Result extends HttpServlet {
 
         LOG.info("Requested URL: {}", url);
 
-        ArrayList<String> urlList = engine.urlList(new URL(url));
+        List<String> videoIdList = engine.getVideoIdList(url);
 
         Map<String, Object> model = new HashMap<>();
-        model.put("urlList", urlList);
+        model.put("videoIdList", videoIdList);
 
         Template template = templateProvider.getTemplate(getServletContext(), SEARCH);
 
         try {
             template.process(model, resp.getWriter());
         } catch (TemplateException e) {
-            e.printStackTrace();
+            LOG.error(e.toString());
         }
     }
 }
