@@ -1,6 +1,7 @@
 package com.wooky.web.servlets;
 
 import com.wooky.core.Engine;
+import com.wooky.core.Video;
 import com.wooky.web.freemarker.TemplateProvider;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -41,10 +42,10 @@ public class Result extends HttpServlet {
 
         LOG.info("Requested URL: {}", url);
 
-        List<String> videoIdList = engine.getVideoIdList(url);
+        List<Video> videoList = engine.getVideoList(url);
 
         Map<String, Object> model = new HashMap<>();
-        model.put("videoIdList", videoIdList);
+        model.put("videoList", videoList);
 
         Template template = templateProvider.getTemplate(getServletContext(), SEARCH);
 

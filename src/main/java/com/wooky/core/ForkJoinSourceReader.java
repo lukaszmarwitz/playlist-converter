@@ -8,14 +8,15 @@ import java.util.regex.Pattern;
 
 public class ForkJoinSourceReader extends RecursiveTask<List<String>> {
 
-    private final Engine engine = new Engine();
+    private final transient Engine engine;
     private final int threshold;
     private final Pattern pattern;
     private final String[] urlArray;
     private int lowestIndex;
     private int highestIndex;
 
-    ForkJoinSourceReader(int threshold, Pattern pattern, String[] urlArray) {
+    ForkJoinSourceReader(Engine engine, int threshold, Pattern pattern, String[] urlArray) {
+        this.engine = engine;
         this.threshold = threshold;
         this.pattern = pattern;
         this.urlArray = urlArray;
@@ -23,7 +24,8 @@ public class ForkJoinSourceReader extends RecursiveTask<List<String>> {
         this.highestIndex = urlArray.length;
     }
 
-    private ForkJoinSourceReader(int threshold, Pattern pattern, String[] urlArray, int lowestIndex, int highestIndex) {
+    private ForkJoinSourceReader(Engine engine, int threshold, Pattern pattern, String[] urlArray, int lowestIndex, int highestIndex) {
+        this.engine = engine;
         this.threshold = threshold;
         this.pattern = pattern;
         this.urlArray = urlArray;
@@ -50,8 +52,8 @@ public class ForkJoinSourceReader extends RecursiveTask<List<String>> {
         } else {
             int middleIndex = (highestIndex - lowestIndex) / 2 + lowestIndex;
 
-            ForkJoinSourceReader left = new ForkJoinSourceReader(threshold, pattern, urlArray, lowestIndex, middleIndex);
-            ForkJoinSourceReader right = new ForkJoinSourceReader(threshold, pattern, urlArray, middleIndex, highestIndex);
+            ForkJoinSourceReader left = new ForkJoinSourceReader(engine, threshold, pattern, urlArray, lowestIndex, middleIndex);
+            ForkJoinSourceReader right = new ForkJoinSourceReader(engine, threshold, pattern, urlArray, middleIndex, highestIndex);
 
             left.fork();
             right.fork();

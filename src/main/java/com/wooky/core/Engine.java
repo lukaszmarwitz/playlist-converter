@@ -26,7 +26,7 @@ public class Engine {
     private static final Pattern PATTERN_YOUTUBE = Pattern.compile("ytimg.com/vi/(\\S+)/hqdefault");
     private static final int THRESHOLD = 5;
 
-    public List<String> getVideoIdList(String urlAddress) {
+    public List<Video> getVideoList(String urlAddress) {
 
         Engine engine = new Engine();
 
@@ -36,8 +36,16 @@ public class Engine {
         String[] youtubeQueryArray = engine.youtubeQueryUrlBuilder(artistsList, titlesList);
 
         ForkJoinPool forkJoinPool = new ForkJoinPool();
+        List<String> tokenList = forkJoinPool
+                .invoke(new ForkJoinSourceReader(engine, THRESHOLD, PATTERN_YOUTUBE, youtubeQueryArray));
 
-        return forkJoinPool.invoke(new ForkJoinSourceReader(THRESHOLD, PATTERN_YOUTUBE, youtubeQueryArray));
+        List<Video> videoList = new ArrayList<>();
+
+        for (int i = 0; i < tokenList.size(); i++) {
+            videoList.add(new Video(i+1, artistsList.get(i), titlesList.get(i), tokenList.get(i)));
+        }
+
+        return videoList;
     }
 
     String websiteSourceReader(String urlAddress) {
@@ -56,8 +64,7 @@ public class Engine {
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(url.openStream()))) {
             String inputLine;
             while ((inputLine = bufferedReader.readLine()) != null) {
-                stringBuilder.append(inputLine.trim());
-                stringBuilder.append(System.lineSeparator());
+                stringBuilder.append(inputLine.trim()).append(System.lineSeparator());
             }
         } catch (IOException e) {
             LOG.error(e.toString());
@@ -73,7 +80,7 @@ public class Engine {
         List<String> list = new ArrayList<>();
 
         while (matcher.find()) {
-            list.add(matcher.group(1).replaceAll(" ", "+").replaceAll("&amp;", ""));
+            list.add(matcher.group(1));
         }
 
         return list;
@@ -81,10 +88,12 @@ public class Engine {
 
     private String[] youtubeQueryUrlBuilder(List<String> firstList, List<String> secondList) {
 
-        String[] array = new String[firstList.size()];
+        String[] array = new String[10];
 
         for (int i = 0; i < array.length; i++) {
-            array[i] = (URL_YOUTUBE + firstList.get(i) + "+" + secondList.get(i));
+            array[i] = (URL_YOUTUBE + firstList.get(i) + "+" + secondList.get(i))
+                    .replaceAll(" ", "+")
+                    .replaceAll("&amp;", "");
         }
 
         return array;

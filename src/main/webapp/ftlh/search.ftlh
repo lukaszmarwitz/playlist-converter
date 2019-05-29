@@ -1,17 +1,14 @@
 <#include "header.ftlh">
 
 <div class="row">
-    <div class="col-12" id="main">
+    <div class="col-12" id="page_search">
 
         <form method="post" action="result">
-            <div class="form-row align-items-center">
-                <div class="col-6 my-1">
-                    <input type="text" class="form-control" name="url" placeholder="https://itunes.apple.com/../playlist/...">
-                </div>
-                <div class="col-auto my-1">
-                    <button type="submit" class="btn btn-primary">Search</button>
-                </div>
-            </div>
+
+            <input type="text" class="form-control" name="url" placeholder="https://itunes.apple.com/../playlist/..." required>
+            <div id="divider"></div>
+            <button type="submit" class="btn font-weight-light">SEARCH</button>
+
         </form>
 
     </div>
